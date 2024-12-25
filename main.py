@@ -53,6 +53,12 @@ def init_config():
     parser.add_argument(
         "-s", "--speed", type=float, default=1.0, help="视频播放倍速 (默认1, 最大2)"
     )
+
+    parser.add_argument(
+        "--uncare_notopen",
+        action="store_true",
+        help="忽略没有开启的章节，直接跳过，不会因为没有题库退出",
+    )
     parser.add_argument(
         "-v",
         "--verbose",
@@ -83,6 +89,7 @@ def init_config():
             ),
             int(config.get("common", "speed")),
             config["tiku"],
+            config.get("common", "uncare_notopen"),
         )
     else:
         return (
@@ -91,6 +98,7 @@ def init_config():
             args.list.split(",") if args.list else None,
             int(args.speed) if args.speed else 1,
             None,
+            args.uncare_notopen,
         )
 
 
@@ -115,7 +123,7 @@ if __name__ == "__main__":
         # 避免异常的无限回滚
         RB = RollBackManager()
         # 初始化登录信息
-        username, password, course_list, speed, tiku_config = init_config()
+        username, password, course_list, speed, tiku_config, uncare_notopen = init_config()
         # 规范化播放速度的输入值
         speed = min(2.0, max(1.0, speed))
         if (not username) or (not password):
@@ -185,6 +193,9 @@ if __name__ == "__main__":
                 # 发现未开放章节, 尝试回滚上一个任务重新完成一次
                 try:
                     if job_info.get("notOpen", False):
+                        if uncare_notopen:
+                            __point_index += 1
+                            continue
                         __point_index -= 1  # 默认第一个任务总是开放的
                         # 针对题库启用情况
                         if not tiku or tiku.DISABLE or not tiku.SUBMIT:
