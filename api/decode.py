@@ -219,18 +219,105 @@ def decode_questions_info(html_content) -> dict:
         # 尝试使用 data 属性来判断题型
         q_type_code = div_tag.find("div", class_="TiMu").attrs["data"]
         q_type = ""
+        q_type_name = ""
         # 此处可能需要完善更多题型的判断
+        # TODO： [4, 5, 6, 7, 8, 18, 26] 归为一类, 为限定字数的写作填空题型
+        # js取值方式: $("#answer" + id).val();
+        # TODO： 填空题类型
+            #     function setAllClozeAnswer() {
+            # 	$(".clozeTextQues").each(function() {
+            # 		var qid = $(this).attr("data");
+            # 		var answerObj = {};
+            # 		$(".clozeTextItem" + qid).each(function() {
+            # 			var itemId = $(this).attr("data");
+            # 			var content = $("#answer" + qid + itemId).val();
+            # 			var info = {};
+            # 			info.answer = content;
+            # 			answerObj[itemId] = info;
+            # 		});
+            # 		var answer = [];
+            # 		answer.push(answerObj);
+            # 		var answerStr = JSON.stringify(answer);
+            # 		$("#answer" + qid).val(answerStr);
+            # 	});
+            # }
         if q_type_code == "0":
             q_type = "single"
+            q_type_name = "单选题"
         elif q_type_code == "1":
+            # answer格式为string: "ABCD"
             q_type = "multiple"
+            q_type_name = "多选题"
         elif q_type_code == "2":
-            q_type = "completion"
+            # 1开始
+            # 答题框数量： var blankNum = $("#blankNum" + qtid).val();
+            # answer格式为json: [{"name": "1", "content": "答案1"}, {"name": "2", "content": "答案2"}]
+            q_type = "completion" 
+            q_type_name = "填空题"
         elif q_type_code == "3":
+            # answer格式为bool: true/false
             q_type = "judgement"
+            q_type_name = "判断题"
+        elif q_type_code == "4":
+            q_type = "simple"
+            q_type_name = "简答题"
+        elif q_type_code == "5":
+            q_type = "unknown"
+            q_type_name = "名词解释"
+        elif q_type_code == "6":
+            q_type = "unknown"
+            q_type_name = "论述题"  
+        elif q_type_code == "7":
+            q_type = "unknown"
+            q_type_name = "计算题"
+        elif q_type_code == "9":
+            q_type = "unknown" # 分录题
+            q_type_name = "分录题"
+        elif q_type_code == "10":
+            q_type = "unknown" # 资料题
+            q_type_name = "资料题"
+        elif q_type_code == "11":
+            q_type = "unknown"
+            q_type_name = "连线题"
+        elif q_type_code == "12":
+            q_type = "unknown"
+            q_type_name = "投票题"
+        elif q_type_code == "13":
+            q_type = "unknown"
+            q_type_name = "排序题"
+        elif q_type_code == "14":
+            q_type = "unknown"
+            q_type_name = "完型填空"
+        elif q_type_code == "15":
+            q_type = "unknown"
+            q_type_name = "阅读理解"
+        elif q_type_code == "16":
+            q_type = "unknown"
+            q_type_name = "综合题"
+        elif q_type_code == "17":
+            # js取值语法：UE.getEditor("textarea" + id).getContentTxt();
+            q_type = "unknown"
+            q_type_name = "程序题"
+            
+        elif q_type_code == "19":
+            q_type = "unknown"
+            q_type_name = "听力题"
+        elif q_type_code == "20":
+            q_type = "unknown"
+            q_type_name = "共用选项题"        
+        elif q_type_code == "22":
+            q_type = "unknown"
+            q_type_name = "口语测评题"
+        elif q_type_code == "18":
+            q_type = "unknown"
+            q_type_name = "口语题"
+        elif q_type_code == "26":
+            q_type = "unknown"
+            q_type_name = "写作题"
         else:
             logger.info("未知题型代码 -> " + q_type_code)
             q_type = "unknown"  # 避免出现未定义取值错误
+            q_type_name = "未知题型"
 
         form_data["questions"].append(
             {
@@ -238,6 +325,7 @@ def decode_questions_info(html_content) -> dict:
                 "title": q_title,  # 题目
                 "options": q_options,  # 选项 可提供给题库作为辅助
                 "type": q_type,  # 题型 可提供给题库作为辅助
+                "typeName": q_type_name,  # 题型名称 可提供给题库作为辅助
                 "answerField": {
                     "answer" + div_tag.attrs["data"]: "",  # 答案填入处
                     "answertype" + div_tag.attrs["data"]: q_type_code,

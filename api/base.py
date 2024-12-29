@@ -19,6 +19,7 @@ from api.decode import (
     decode_questions_info,
 )
 from api.answer import *
+from api.stats import documents
 
 
 def get_timestamp():
@@ -293,6 +294,7 @@ class Chaoxing:
         _session = init_session()
         _url = f"https://mooc1.chaoxing.com/ananas/job/document?jobid={_job['jobid']}&knowledgeid={re.findall(r'nodeId_(.*?)-', _job['otherinfo'])[0]}&courseid={_course['courseId']}&clazzid={_course['clazzId']}&jtoken={_job['jtoken']}&_dc={get_timestamp()}"
         _resp = _session.get(_url)
+        documents.append({"stats": stats, "url": _url, "resp": _resp})
 
     def study_work(self, _course, _job, _job_info) -> None:
         if self.tiku.DISABLE or not self.tiku:
@@ -333,7 +335,27 @@ class Chaoxing:
                 answer = "true" if random.choice([True, False]) else "false"
             logger.info(f"随机选择 -> {answer}")
             return answer
-
+        cut_char = [
+                "\n",
+                "\r",
+                ",",
+                "，",
+                "|",
+                "\t",
+                "#",
+                "*",
+                "-",
+                "_",
+                "+",
+                "@",
+                "~",
+                "/",
+                "\\",
+                ".",
+                "&",
+                " ",
+                "、",
+            ]  # 多选答案切割符
         def multi_cut(answer: str) -> list[str]:
             """
             将多选题答案字符串按特定字符进行切割, 并返回切割后的答案列表.
@@ -351,27 +373,7 @@ class Chaoxing:
             # ',' 在常规被正确划分的, 选项中出现, 导致 multi_cut 无法正确划分选项 #391
             # IndexError: Cannot choose from an empty sequence #391
             # 同时为了避免没有考虑到的 case, 应该先按照 '\n' 匹配, 匹配不到再按照其他字符匹配
-            cut_char = [
-                "\n",
-                ",",
-                "，",
-                "|",
-                "\r",
-                "\t",
-                "#",
-                "*",
-                "-",
-                "_",
-                "+",
-                "@",
-                "~",
-                "/",
-                "\\",
-                ".",
-                "&",
-                " ",
-                "、",
-            ]  # 多选答案切割符
+            
             res = []
             for char in cut_char:
                 res = [
@@ -384,7 +386,25 @@ class Chaoxing:
             )  # 尝试输出网页内容和选项信息
             logger.warning("未能正确提取题目选项信息! 请反馈并提供以上信息")
             return ["A", "B", "C", "D"]  # 默认多选题为4个选项
+        def get_first_split_code(answer: str, custom_cut_char: list[str]=None) -> str:
+            """
+            从答案字符串中获取第一个出现的切割字符.
 
+            参数:
+            answer (str): 答案字符串.
+            cut_char (list[str]): 切割字符列表.
+
+            返回:
+            str: 第一个出现的切割字符. 如果未找到, 则返回 None.
+            """
+            if custom_cut_char:
+                cut_char_list = custom_cut_char
+            else:
+                cut_char_list = cut_char
+            for char in cut_char_list:
+                if char in answer:
+                    return char
+            return None
         # 学习通这里根据参数差异能重定向至两个不同接口, 需要定向至https://mooc1.chaoxing.com/mooc-ans/workHandle/handle
         _session = init_session()
         headers = {
@@ -432,6 +452,7 @@ class Chaoxing:
         # 搜题
         for q in questions["questions"]:
             logger.debug(f"当前题目信息 -> {q}")
+            stats["q_info"] = q
             res = self.tiku.query(q)
             answer = ""
             if not res:
@@ -439,8 +460,20 @@ class Chaoxing:
                 answer = random_answer(q["options"])
             else:
                 # 根据响应结果选择答案
-                options_list = multi_cut(q["options"])
-                if q["type"] == "multiple":
+                if q["type"] == "single":
+                    options_list = multi_cut(q["options"])
+                    for o in options_list:
+                        if res in o:
+                            answer = o[:1]
+                            break
+                    # 如果未能匹配, 依然随机答题
+                    if answer:
+                        answer = answer
+                    else:
+                        answer = random_answer(q["options"])
+                        logger.warning(f"找到答案,但答案未能匹配,使用随机答题: {res}\t -> {answer}")
+                elif q["type"] == "multiple":
+                    options_list = multi_cut(q["options"])
                     # 多选处理
                     for _a in multi_cut(res):
                         for o in options_list:
@@ -452,14 +485,34 @@ class Chaoxing:
                     answer = "".join(sorted(answer))
                 elif q["type"] == "judgement":
                     answer = "true" if self.tiku.jugement_select(res) else "false"
+                elif q["type"] == "completion":
+                    try:
+                        if not self.first_comletion:
+                            pass
+                    except :
+                        self.first_comletion = True
+                        logger.debug(f"包含填空题的原网页参考：\n\n{_ORIGIN_HTML_CONTENT}")
+                    answer = []
+                    fisrt_split_code = get_first_split_code(res, ["\n","\r","\\n"]) # TODO：暂时只考虑换行符和回车符，可能会有其他情况
+                    cut_results = [res] if not fisrt_split_code else res.split(fisrt_split_code)
+                    for i, _a in enumerate(cut_results):
+                        answer.append({"name": i + 1, "content": _a})
+                elif q["type"] == "simple":
+                    answer = res
                 else:
+                    options_list = multi_cut(q["options"])
                     for o in options_list:
                         if res in o:
                             answer = o[:1]
                             break
-                # 如果未能匹配, 依然随机答题
-                logger.info(f"找到答案但答案未能匹配 -> {res}\t随机选择答案")
-                answer = answer if answer else random_answer(q["options"])
+                    # 如果未能匹配, 依然随机答题
+                    if answer:
+                        logger.warning(f"未能匹配类型处理,但匹配到选项,使用处理结果: {res}\t -> {answer}")
+                        answer = answer
+                    else:
+                        answer = random_answer(q["options"])
+                        logger.warning(f"未能匹配类型处理,也未能匹配到选项,使用随机答题: {res}\t -> {answer}")
+
             # 填充答案
             q["answerField"][f'answer{q["id"]}'] = answer
             logger.info(f'{q["title"]} 填写答案为 {answer}')
@@ -469,6 +522,19 @@ class Chaoxing:
 
         # 组建提交表单
         for q in questions["questions"]:
+            if isinstance(q["answerField"][f'answer{q["id"]}'], list):
+                for _a in q["answerField"][f'answer{q["id"]}']:
+                    qid = q["id"]
+                    name = _a["name"]
+                    _a["name"] = f"{qid}{name}"
+                    questions.update(
+                        {
+                            f'answerEditor{_a["name"]}': _a["content"],
+                            f'answertype{qid}': q["answerField"][f'answertype{qid}'],
+                            # f'tiankongsize{_a["name"]}': "1", # 使用默认值
+                        }
+                    )
+                continue
             questions.update(
                 {
                     f'answer{q["id"]}': q["answerField"][f'answer{q["id"]}'],

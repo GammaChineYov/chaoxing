@@ -7,6 +7,7 @@ from api.logger import logger
 from api.base import Chaoxing, Account
 from api.exceptions import LoginError, FormatError, JSONDecodeError, MaxRollBackError
 from api.answer import Tiku
+from api.stats import stats
 from urllib3 import disable_warnings, exceptions
 import time
 import sys
@@ -150,6 +151,7 @@ if __name__ == "__main__":
             print("*" * 10 + "课程列表" + "*" * 10)
             for course in all_course:
                 print(f"ID: {course['courseId']} 课程名: {course['title']}")
+                
             print("*" * 28)
             try:
                 course_list = input(
@@ -167,6 +169,7 @@ if __name__ == "__main__":
         logger.info(f"课程列表过滤完毕, 当前课程任务数量: {len(course_task)}")
         for course in course_task:
             logger.info(f"开始学习课程: {course['title']}")
+            stats["course"] = course
             # 获取当前课程的所有章节
             point_list = chaoxing.get_course_point(
                 course["courseId"], course["clazzId"], course["cpi"]
@@ -177,6 +180,8 @@ if __name__ == "__main__":
             while __point_index < len(point_list["points"]):
                 point = point_list["points"][__point_index]
                 logger.info(f'当前章节: {point["title"]}')
+                stats["chapter_point"] = point
+                stats["point_index"] = __point_index
                 logger.debug(f"当前章节 __point_index: {__point_index}")  # 触发参数: -v
                 sleep_duration = random.uniform(1, 3)
                 logger.debug(f"本次随机等待时间: {sleep_duration}")
@@ -187,6 +192,7 @@ if __name__ == "__main__":
                 jobs, job_info = chaoxing.get_job_list(
                     course["clazzId"], course["courseId"], course["cpi"], point["id"]
                 )
+                stats["job_info"] = job_info
 
                 # bookID = job_info["knowledgeid"] # 获取视频ID
 
@@ -216,7 +222,9 @@ if __name__ == "__main__":
                     __point_index += 1
                     continue
                 # 遍历所有任务点
-                for job in jobs:
+                for job_index, job in enumerate(jobs):
+                    stats["job_index"] = job_index
+                    stats["job"] = job
                     # 视频任务
                     if job["type"] == "video":
                         # TODO: 目前这个记录功能还不够完善, 中途退出的课程ID也会被记录

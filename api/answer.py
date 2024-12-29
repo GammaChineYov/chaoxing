@@ -5,6 +5,9 @@ import json
 from api.logger import logger
 import random
 from urllib3 import disable_warnings,exceptions
+
+from doubao import query_answer_with_ai
+from api.stats import stats
 # 关闭警告
 disable_warnings(exceptions.InsecureRequestWarning)
 
@@ -279,48 +282,40 @@ class TikuOpenAICompatible(Tiku):
     def __init__(self) -> None:
         super().__init__()
         self.name = 'OpenAI Compatible 题库'
-        self.api = 'your_openai_compatible_api_endpoint'  # 替换为实际的 OpenAI 兼容接口地址
-        self._token = None
+        self.ai_conf = {}
         self._token_index = 0  # token 队列计数器
         self._times = 100  # 查询次数剩余, 初始化为 100, 查询后校对修正
-        self._prompt_format = "请回答以下问题并按照指定格式返回结果：{q_info}\n以下为指定json格式返回结果: {{\"answer\":\"具体答案\",\"depend_message\":\"每个选项的依据分析\",\"invert_message\":\"部分选项的排除法分析\"}}"
+        self._use_token_count = 0  # 使用的 token 计数器
 
     def _query(self, q_info: dict):
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self._token}"  # 假设使用 Bearer Token 认证，根据实际情况修改
-        }
-        data = {
-            "prompt": self._prompt_format.format(q_info=str(q_info)),
-            "max_tokens": 100  # 根据需要调整生成的最大 tokens 数
-        }
-        res = requests.post(self.api, headers=headers, json=data)
-        if res.status_code == 200:
-            res_json = res.json()
-            if res_json.get('error'):
-                # 处理错误情况，如 token 过期等，这里只是示例，需要根据实际接口返回的错误信息进行完善
-                if 'token expired' in res_json['error']['message']:
-                    logger.info(f'TOKEN 过期, 将会更换并重新搜题')
-                    self._token_index += 1
-                    self.load_token()
-                    # 重新查询
-                    return self._query(q_info)
-                logger.error(f'{self.name}查询失败:\n\t错误信息: {res_json["error"]}')
-                return None
-            answer = res_json['answer'].strip()
-            self._times = res_json.get('times', self._times)
+        send_message = q_info.copy()
+        send_message['stats'] = stats
+        answer, use_tokens = query_answer_with_ai(q_info, self.ai_conf)
+        if answer:
+            answer = answer.strip()
+            if q_info['type'] == 'judgement':
+                answer = answer[:1]
+            self._use_token_count += use_tokens
+            print(f'使用 token 数: {use_tokens}, 本轮总使用 token 数: {self._use_token_count}')
             return answer
         else:
-            logger.error(f'{self.name}查询失败:\n{res.text}')
-            return None
+            self._token_index += 1
+            self.load_token()
+            logger.error(f'{self.name}查询失败, 没有获得答案，设置下一个 token 重试')
+            return self._query(q_info)
 
     def load_token(self):
-        token_list = self._conf['tokens'].split(',')
+        token_list = self._conf['model_endpoints'].split(',')
         if self._token_index == len(token_list):
             # TOKEN 用完
             logger.error('TOKEN 用完, 请自行更换再重启脚本')
             raise Exception(f'{self.name} TOKEN 已用完, 请更换')
-        self._token = token_list[self._token_index]
+        _token = token_list[self._token_index]
+        self.ai_conf.update({
+            'api_url': self._conf["url"],
+            'api_key': self._conf["api_key"],
+            'model_endpoint': _token,
+        })
 
     def _init_tiku(self):
         self.load_token()
