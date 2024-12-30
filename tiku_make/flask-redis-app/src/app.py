@@ -1,5 +1,6 @@
 import os 
 import sys
+import json
 sys.path.append(os.path.dirname(__file__))
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -81,6 +82,29 @@ def lpop():
     key = data.get('key')
     value = redis_client.lpop(key)
     return jsonify({"value": value}), 200
+
+@app.route('/clean_up_no_answer_entries', methods=['POST'])
+@auth.login_required
+def clean_up_no_answer_entries():
+    keys = redis_client.keys('question_*')
+    for key in keys:
+        data = redis_client.get(key)
+        data = json.loads(data)
+        if not data or not any([d.get('answer') for d in data]):
+            redis_client.delete(key)
+    return jsonify({"message": "清理完成"}), 200
+
+@app.route('/get_unique_question', methods=['POST'])
+@auth.login_required
+def get_unique_question():
+    question = redis_client.lpop('questions')
+    if question:
+        existing_data = redis_client.get("question_" + question)
+        if existing_data:
+            return jsonify({"message": "问题已存在", "question": None}), 200
+        else:
+            return jsonify({"question": question}), 200
+    return jsonify({"message": "没有问题"}), 404
 
 @app.cli.command('get-token')
 def get_token():

@@ -33,3 +33,13 @@ class FlaskClient:
         if response.status_code == 200:
             return response.json().get('value')
         return None
+
+    def get_unique_question(self):
+        response = requests.post(f"{self.flask_host}/get_unique_question", headers=self.headers)
+        if response.status_code == 200:
+            return response.json()
+        return None
+
+    def clean_up_no_answer_entries(self):
+        response = requests.post(f"{self.flask_host}/clean_up_no_answer_entries", headers=self.headers)
+        return response.status_code == 200

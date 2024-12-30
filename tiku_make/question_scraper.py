@@ -107,16 +107,11 @@ class QuestionScraper:
             print(Fore.GREEN + "Started processing questions..." + Style.RESET_ALL)
             while True:
                 try:
-                    question = self.flask_client.lpop('questions')
+                    response = self.flask_client.get_unique_question()
+                    question = response.get('question')
                     if question:
-                        existing_data = self.flask_client.get_data("question_" + question)
-                        if existing_data and not self.force_flush:
-                            print(Fore.YELLOW + f"Question already has an answer, re-fetching: {question}" + Style.RESET_ALL)
-                            continue
-                        else:
-                            print(Fore.GREEN + f"INFO: Processing question: {question}" + Style.RESET_ALL)
-                            
-                        context = browser.new_context(**context_config)           
+                        print(Fore.GREEN + f"INFO: Processing question: {question}" + Style.RESET_ALL)
+                        context = browser.new_context(**context_config)
                         questions_and_answers = self.scrape_questions_and_answers(question, context)
                         context.close()
                         answers = json.dumps(questions_and_answers, ensure_ascii=False)
@@ -125,8 +120,6 @@ class QuestionScraper:
                         self.flask_client.set_data("question_" + question, answers)
                     else:
                         time.sleep(1)
-                    time.sleep(1)
-
                 except KeyboardInterrupt:
                     break
             browser.close()
