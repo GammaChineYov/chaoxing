@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>管理员面板</h1>
+<p>网站用户数: {{ user_count }}</p>
+
+<h2>增加用户账号</h2>
+<form id="createUserForm">
+    <label for="username">用户名:</label>
+    <input type="text" id="username" name="username"><br><br>
+    <label for="password">密码:</label>
+    <input type="password" id="password" name="password"><br><br>
+    <label for="is_vip">VIP 用户:</label>
+    <input type="checkbox" id="is_vip" name="is_vip"><br><br>
+    <button type="button" onclick="createUser()">创建用户</button>
+</form>
+
+<h2 class="mt-5">修改用户密码</h2>
+<form id="changeUserPasswordForm">
+    <label for="change_username">用户名:</label>
+    <input type="text" id="change_username" name="change_username" list="usernames" oninput="fetchUsernames()"><br><br>
+    <datalist id="usernames"></datalist>
+    <label for="new_password">新密码:</label>
+    <input type="password" id="new_password" name="new_password"><br><br>
+    <button type="button" onclick="changeUserPassword()">修改密码</button>
+</form>
+
+<h2 class="mt-5">查看和设置用户信息</h2>
+<form id="viewUserForm">
+    <label for="view_username">用户名:</label>
+    <input type="text" id="view_username" name="view_username" list="usernames" oninput="fetchUsernames()"><br><br>
+    <button type="button" onclick="viewUser()">查看用户信息</button>
+</form>
+<div id="userInfo" style="display: none;">
+    <p>用户名: <span id="user_username"></span></p>
+    <p>VIP 用户: <span id="user_is_vip"></span></p>
+    <p>管理员: <span id="user_is_admin"></span></p>
+    <p>创建者: <span id="user_created_by"></span></p>
+    <p>密码是否已更改: <span id="user_password_changed"></span></p>
+    <p>创建时间: <span id="user_created_at"></span></p>
+    <p>上次登录时间: <span id="user_last_login_at"></span></p>
+    <button type="button" onclick="toggleVip()">切换 VIP 状态</button>
+    <button type="button" onclick="toggleAdmin()">切换管理员状态</button>
+</div>
+
+<script>
+    function createUser() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const is_vip = document.getElementById('is_vip').checked;
+        fetch('/admin', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password, is_vip })
+        })
+        .then(response => response.json())
+        .then(data => alert(data.message))
+        .catch(error => console.error('Error:', error));
+    }
+
+    function changeUserPassword() {
+        const username = document.getElementById('change_username').value;
+        const new_password = document.getElementById('new_password').value;
+        fetch('/admin/change_password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, new_password })
+        })
+        .then(response => response.json())
+        .then(data => alert(data.message))
+        .catch(error => console.error('Error:', error));
+    }
+
+    function fetchUsernames() {
+        const query = document.getElementById('change_username').value;
+        fetch(`/admin/usernames?query=${query}`)
+        .then(response => response.json())
+        .then(data => {
+            const datalist = document.getElementById('usernames');
+            datalist.innerHTML = '';
+            data.forEach(username => {
+                const option = document.createElement('option');
+                option.value = username;
+                datalist.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function viewUser() {
+        const username = document.getElementById('view_username').value;
+        fetch(`/admin/user_info?username=${username}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message);
+            } else {
+                document.getElementById('user_username').innerText = data.username;
+                document.getElementById('user_is_vip').innerText = data.is_vip ? '是' : '否';
+                document.getElementById('user_is_admin').innerText = data.is_admin ? '是' : '否';
+                document.getElementById('user_created_by').innerText = data.created_by;
+                document.getElementById('user_password_changed').innerText = data.password_changed ? '是' : '否';
+                document.getElementById('user_created_at').innerText = data.created_at;
+                document.getElementById('user_last_login_at').innerText = data.last_login_at;
+                document.getElementById('userInfo').style.display = 'block';
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function toggleVip() {
+        const username = document.getElementById('view_username').value;
+        fetch(`/admin/toggle_vip`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            viewUser();
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function toggleAdmin() {
+        const username = document.getElementById('view_username').value;
+        fetch(`/admin/toggle_admin`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            viewUser();
+        })
+        .catch(error => console.error('Error:', error));
+    }
+</script>
+{% endblock %}

@@ -30,3 +30,9 @@ class RedisClient:
 
     def flushdb(self):
         return self.client.flushdb()
+
+    def sadd(self, key, value):
+        return self.client.sadd(key, value)
+
+    def sismember(self, key, value):
+        return self.client.sismember(key, value)
