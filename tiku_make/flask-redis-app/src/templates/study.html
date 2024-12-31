@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <ul class="nav nav-tabs" id="studyTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="settings-tab" data-toggle="tab" href="#settings" role="tab">设置</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="progress-tab" data-toggle="tab" href="#progress" role="tab">学习进度</a>
+        </li>
+    </ul>
+    <div class="tab-content" id="studyTabsContent">
+        <div class="tab-pane fade show active" id="settings" role="tabpanel">
+            <h3>设置</h3>
+            <div id="loginPanel">
+                <h4>账号密码</h4>
+                <form id="loginForm">
+                    <label for="username">用户名:</label>
+                    <input type="text" id="username" name="username"><br><br>
+                    <label for="password">密码:</label>
+                    <input type="password" id="password" name="password"><br><br>
+                    <button type="button" onclick="login()">登录</button>
+                </form>
+                <div id="loginStatus"></div>
+            </div>
+            <div id="coursePanel" style="display: none;">
+                <h4>课程设置</h4>
+                <form id="courseForm">
+                    <div id="courseList"></div>
+                    <button type="button" onclick="startStudy()">开始学习</button>
+                </form>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="progress" role="tabpanel">
+            <h3>学习进度</h3>
+            <div id="progressTree"></div>
+            <div id="totalProgress">
+                <p>总学习时间: <span id="totalTime"></span></p>
+                <p>单任务点平均完成时间: <span id="avgTaskTime"></span></p>
+                <p>单章节平均完成时间: <span id="avgChapterTime"></span></p>
+                <button type="button" onclick="stopStudy()">停止</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function login() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        fetch('/study/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const loginStatus = document.getElementById('loginStatus');
+            if (data.success) {
+                loginStatus.innerHTML = '<span style="color: green;">登录成功</span>';
+                document.getElementById('coursePanel').style.display = 'block';
+                fetchCourses();
+            } else {
+                loginStatus.innerHTML = `<span style="color: red;">登录失败: ${data.message}</span>`;
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function fetchCourses() {
+        fetch('/study/courses')
+        .then(response => response.json())
+        .then(data => {
+            const courseList = document.getElementById('courseList');
+            courseList.innerHTML = '';
+            data.courses.forEach(course => {
+                const courseItem = document.createElement('div');
+                courseItem.innerHTML = `
+                    <input type="checkbox" id="course_${course.id}" name="courses" value="${course.id}">
+                    <label for="course_${course.id}">${course.name}</label>
+                `;
+                courseList.appendChild(courseItem);
+            });
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function startStudy() {
+        const selectedCourses = Array.from(document.querySelectorAll('input[name="courses"]:checked')).map(checkbox => checkbox.value);
+        fetch('/study/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ courses: selectedCourses })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('progress-tab').click();
+                fetchProgress();
+            } else {
+                alert(`开始学习失败: ${data.message}`);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function fetchProgress() {
+        fetch('/study/progress')
+        .then(response => response.json())
+        .then(data => {
+            const progressTree = document.getElementById('progressTree');
+            progressTree.innerHTML = JSON.stringify(data.progress, null, 2);
+            document.getElementById('totalTime').innerText = data.totalTime;
+            document.getElementById('avgTaskTime').innerText = data.avgTaskTime;
+            document.getElementById('avgChapterTime').innerText = data.avgChapterTime;
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function stopStudy() {
+        fetch('/study/stop', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('学习已停止');
+            } else {
+                alert(`停止学习失败: ${data.message}`);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+</script>
+{% endblock %}

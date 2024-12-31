@@ -5,10 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flask Redis App</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .sidebar {
+            display: none;
+        }
+        .sidebar.show {
+            display: block;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <a class="navbar-brand" href="/">首页</a>
+        <button class="navbar-toggler" type="button" onclick="toggleSidebar()">
+            <span class="navbar-toggler-icon"></span>
+        </button>
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav ml-auto">
                 <li class="nav-item dropdown">
@@ -42,7 +53,18 @@
                                 <a class="nav-link" href="/token">Token 管理</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="#">学习（待实现）</a>
+                                <a class="nav-link" href="/study">学习</a>
+                                <ul class="nav flex-column ml-3">
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="/study/settings">设置</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="/study/progress">学习进度</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="/study/logs">学习日志</a>
+                                    </li>
+                                </ul>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="#">题库管理（待实现）</a>
@@ -66,5 +88,10 @@
     </div>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('show');
+        }
+    </script>
 </body>
 </html>
