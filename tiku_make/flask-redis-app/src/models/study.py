@@ -4,7 +4,7 @@ from src.extensions import db
 class StudySession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    start_time = db.Column(db.DateTime, default=datetime.utcnow)
+    start_time = db.Column(db.DateTime, default=datetime.now)
     end_time = db.Column(db.DateTime)
     courses = db.Column(db.PickleType)
 
@@ -15,7 +15,7 @@ class StudyProgress(db.Model):
     chapter_id = db.Column(db.String(80), nullable=False)
     task_id = db.Column(db.String(80), nullable=False)
     duration = db.Column(db.Integer, default=0)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.now)
 
     def to_dict(self):
         return {

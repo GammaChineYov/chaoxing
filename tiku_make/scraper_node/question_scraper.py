@@ -5,7 +5,7 @@ from urllib.parse import urlparse, urlencode
 from playwright.sync_api import sync_playwright, Page
 from bs4 import BeautifulSoup
 from colorama import Fore, Style
-from flask_client import FlaskClient
+from tiku_make.scraper_node.flask_client import FlaskClient
 
 
 class QuestionScraper:

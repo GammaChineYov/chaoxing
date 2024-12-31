@@ -7,3 +7,5 @@ playwright==1.29.0
 beautifulsoup4==4.11.1
 colorama==0.4.6
 requests
+flask-socketio==5.12.1
+flask-jwt-extended==4.7.1

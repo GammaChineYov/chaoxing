@@ -1,5 +1,5 @@
 import json
-from question_manager import QuestionManager
+from tiku_make.scraper_node.question_manager import QuestionManager
 
 if __name__ == "__main__":
     cache_json_file = "cache.json"
