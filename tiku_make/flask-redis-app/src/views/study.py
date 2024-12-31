@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, session
 from flask_socketio import SocketIO, emit
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from src.models.user import User
-from src.study_models import StudySession, StudyProgress
+from src.models.study import StudySession, StudyProgress
 from src.extensions import db
 from api.base import Chaoxing, Account
 from datetime import datetime
