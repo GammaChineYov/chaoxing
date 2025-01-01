@@ -26,7 +26,8 @@ from flask_login import LoginManager, current_user
 from src.views.admin import admin_bp
 from flask_socketio import SocketIO
 from flask_jwt_extended import JWTManager
-from src.views.study import study_bp, socketio, jwt
+from views.study import study_bp, socketio, jwt
+from views.admin.scraper_manage import scraper_manage_bp
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
@@ -61,6 +62,7 @@ app.register_blueprint(token_bp, url_prefix='/token')
 app.register_blueprint(user_bp, url_prefix='/user')
 app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(study_bp, url_prefix='/study')
+app.register_blueprint(scraper_manage_bp)
 
 CORS(app)
 
