@@ -3,66 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flask Redis App</title>
+    <title>{% block title %}Flask Redis App{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
         .sidebar {
-            display: none;
+            width: 250px;
+            position: fixed;
+            top: 0; /* 确保侧边栏从顶部开始 */
+            left: -250px; /* 初始隐藏 */
+            height: 100vh; /* 确保高度不超过页面高度 */
+            background-color: #343a40;
+            padding-top: 56px; /* 确保内容不被导航栏遮挡 */
+            transition: left 0.3s ease;
+            overflow-y: auto; /* 添加滚动条 */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
         .sidebar.show {
-            display: block;
+            left: 0;
+        }
+        .navbar-toggler {
+            position: fixed;
+            top: 56px;
+            left: 0;
+            width: 40px;
+            height: 40px;
+            z-index: 1000;
+            transition: left 0.3s ease;
+        }
+        .navbar-toggler.shifted {
+            left: 250px;
+        }
+        .main-content {
+            transition: margin-left 0.3s ease;
+        }
+        .main-content.shifted {
+            margin-left: 250px;
+        }
+        .navbar.shifted {
+            margin-left: 250px;
+        }
+        .sidebar-footer {
+            width: 100%; /* 确保宽度一致 */
+            padding: 10px;
+            background-color: #495057; /* 改变背景颜色 */
+        }
+        .sidebar-footer .nav-item .nav-link {
+            color: #f8f9fa;
+            width: 100%; /* 确保宽度一致 */
+            background-color: #495057; /* 改变选项背景颜色 */
+        }
+        .sidebar-footer .nav-item .nav-link:hover {
+            background-color: #6c757d;
+        }
+        .sidebar-footer .dropdown-menu {
+            background-color: #495057; /* 改变背景颜色 */
+            border: none;
+            width: 100%; /* 确保宽度一致 */
+        }
+        .sidebar-footer .dropdown-menu .dropdown-item {
+            color: #f8f9fa;
+            background-color: #495057; /* 改变选项背景颜色 */
+        }
+        .sidebar-footer .dropdown-menu .dropdown-item:hover {
+            background-color: #6c757d;
+        }
+        .dropdown-menu-hidden {
+            display: none; /* 默认隐藏 */
         }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="/">首页</a>
+        <a class="navbar-brand" href="{{ url_for('index') }}">首页</a>
         <button class="navbar-toggler" type="button" onclick="toggleSidebar()">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse">
-            <ul class="navbar-nav ml-auto">
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown">
-                        {% if current_user.is_authenticated %}
-                            {{ current_user.username }}
-                        {% else %}
-                            请登录
-                        {% endif %}
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-right">
-                        {% if current_user.is_authenticated %}
-                            <a class="dropdown-item" href="/user/change_password">修改密码</a>
-                            <a class="dropdown-item" href="#">用户设置</a>
-                            <a class="dropdown-item" href="/user/logout">退出</a>
-                        {% else %}
-                            <a class="dropdown-item" href="/user/login">登录</a>
-                        {% endif %}
-                    </div>
-                </li>
-            </ul>
-        </div>
     </nav>
     <div class="container-fluid">
         <div class="row">
             {% if current_user.is_authenticated %}
-                <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+                <nav class="col-md-2 bg-light sidebar">
                     <div class="sidebar-sticky">
                         <ul class="nav flex-column">
                             <li class="nav-item">
-                                <a class="nav-link" href="/token">Token 管理</a>
+                                <a class="nav-link" href="{{ url_for('token.token_page') }}">Token 管理</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/study">学习</a>
+                                <a class="nav-link" href="{{ url_for('study.study_page') }}">学习</a>
                                 <ul class="nav flex-column ml-3">
                                     <li class="nav-item">
-                                        <a class="nav-link" href="/study/settings">设置</a>
+                                        <a class="nav-link" href="{{ url_for('study.study_page') }}#settings">设置</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link" href="/study/progress">学习进度</a>
+                                        <a class="nav-link" href="{{ url_for('study.study_page') }}#progress">学习进度</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link" href="/study/logs">学习日志</a>
+                                        <a class="nav-link" href="{{ url_for('study.study_page') }}#logs">学习日志</a>
                                     </li>
                                 </ul>
                             </li>
@@ -74,17 +113,33 @@
                             </li>
                             {% if current_user.is_admin %}
                                 <li class="nav-item">
-                                    <a class="nav-link" href="/admin">管理员</a>
+                                    <a class="nav-link" href="{{ url_for('admin.admin_page') }}">管理员</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="/admin/scraper_manage">爬虫管理</a>
+                                    <a class="nav-link" href="{{ url_for('admin.admin_page') }}">爬虫管理</a>
                                 </li>
                             {% endif %}
                         </ul>
                     </div>
+                    <div class="sidebar-footer">
+                        <ul class="nav flex-column">
+                            <li class="nav-item">
+                                <a class="nav-link dropdown-toggle" href="#" id="sidebarDropdown" role="button" onclick="toggleDropdown()">
+                                    {{ current_user.username }}
+                                </a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <div class="dropdown-menu dropdown-menu-hidden">
+                                    <a class="dropdown-item" href="{{ url_for('user.change_password') }}">修改密码</a>
+                                    <a class="dropdown-item" href="#">用户设置</a>
+                                    <a class="dropdown-item" href="{{ url_for('user.logout') }}">退出</a>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
                 </nav>
             {% endif %}
-            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4 main-content">
                 {% block content %}{% endblock %}
             </main>
         </div>
@@ -93,7 +148,19 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
     <script>
         function toggleSidebar() {
-            document.querySelector('.sidebar').classList.toggle('show');
+            const sidebar = document.querySelector('.sidebar');
+            const mainContent = document.querySelector('.main-content');
+            const navbar = document.querySelector('.navbar');
+            const navbarToggler = document.querySelector('.navbar-toggler');
+            sidebar.classList.toggle('show');
+            mainContent.classList.toggle('shifted');
+            navbar.classList.toggle('shifted');
+            navbarToggler.classList.toggle('shifted');
+        }
+
+        function toggleDropdown() {
+            const dropdownMenu = document.querySelector('.sidebar-footer .dropdown-menu');
+            dropdownMenu.classList.toggle('dropdown-menu-hidden');
         }
     </script>
 </body>

@@ -22,7 +22,7 @@ from src.extensions import db
 from src.models.user import User
 from src.views.user import user_bp
 from werkzeug.security import generate_password_hash
-from flask_login import LoginManager, current_user
+from flask_login import LoginManager, current_user, UserMixin
 from src.views.admin import admin_bp
 from flask_socketio import SocketIO
 from flask_jwt_extended import JWTManager
@@ -30,10 +30,14 @@ from views.study import study_bp, socketio, jwt
 from views.admin.scraper_manage import scraper_manage_bp
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+# sqlite _filedir__/app.db
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(file_dir, 'app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'chaoxing'
 app.config['JWT_SECRET_KEY'] = 'chaoxing'
+app.config['DEFAULT_ADMIN_USERNAME'] = 'admin'
+app.config['DEFAULT_ADMIN_PASSWORD'] = 'admin'
+app.config['SERVER_NAME'] = 'localhost:5000'  # 添加 SERVER_NAME 配置项
 
 db.init_app(app)
 socketio.init_app(app)
@@ -47,13 +51,13 @@ login_manager.init_app(app)
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-@app.before_request
+@app.before_request 
 def create_tables():
     if app._got_first_request:
         db.create_all()
-        admin = User.query.filter_by(username='admin').first()
+        admin = User.query.filter_by(username=app.config['DEFAULT_ADMIN_USERNAME']).first()
         if not admin:
-            admin = User(username='admin', password=generate_password_hash('admin'), is_admin=True)
+            admin = User(username=app.config['DEFAULT_ADMIN_USERNAME'], password=generate_password_hash(app.config['DEFAULT_ADMIN_PASSWORD']), is_admin=True)
             db.session.add(admin)
             db.session.commit()
 

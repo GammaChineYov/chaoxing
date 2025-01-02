@@ -1,201 +1,196 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>爬虫管理</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.5.2/css/bootstrap.min.css">
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.3/socket.io.js"></script>
-</head>
-<body>
-    <div class="container">
-        <h1 class="mt-5">爬虫管理</h1>
-        <ul class="nav nav-tabs" id="scraperTabs" role="tablist">
-            <li class="nav-item">
-                <a class="nav-link active" id="manage-tab" data-toggle="tab" href="#manage" role="tab">爬虫管理</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="test-tab" data-toggle="tab" href="#test" role="tab">测试</a>
-            </li>
-        </ul>
-        <div class="tab-content" id="scraperTabsContent">
-            <div class="tab-pane fade show active" id="manage" role="tabpanel">
-                <h2 class="mt-4">爬虫进程列表</h2>
-                <table class="table table-bordered" id="scraperTable">
-                    <thead>
-                        <tr>
-                            <th>爬虫名称</th>
-                            <th>状态</th>
-                            <th>运行时间</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- 动态表格内容 -->
-                    </tbody>
-                </table>
-                <button class="btn btn-primary" id="addScraperBtn">添加爬虫</button>
-                <button class="btn btn-secondary" id="refreshScraperBtn">刷新</button>
-                <button class="btn btn-danger" id="clearScraperBtn">清除</button>
-            </div>
-            <div class="tab-pane fade" id="test" role="tabpanel">
-                <h2 class="mt-4">测试</h2>
-                <form id="testForm">
-                    <div class="form-group">
-                        <label for="task">爬虫任务</label>
-                        <input type="text" class="form-control" id="task" placeholder="输入爬虫任务" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="queue">选择队列</label>
-                        <select class="form-control" id="queue">
-                            {% for queue in redis_queues %}
-                                <option value="{{ queue }}">{{ queue }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary">发送任务</button>
-                    <button type="button" class="btn btn-danger" id="deleteTestResultBtn">删除测试结果</button>
-                </form>
-                <div id="testResult" class="mt-4">
-                    <!-- 测试结果 -->
+{% extends "base.html" %}
+
+{% block title %}爬虫管理{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mt-5">爬虫管理</h1>
+    <ul class="nav nav-tabs" id="scraperTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="manage-tab" data-toggle="tab" href="#manage" role="tab">爬虫管理</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="test-tab" data-toggle="tab" href="#test" role="tab">测试</a>
+        </li>
+    </ul>
+    <div class="tab-content" id="scraperTabsContent">
+        <div class="tab-pane fade show active" id="manage" role="tabpanel">
+            <h2 class="mt-4">爬虫进程列表</h2>
+            <table class="table table-bordered" id="scraperTable">
+                <thead>
+                    <tr>
+                        <th>爬虫名称</th>
+                        <th>状态</th>
+                        <th>运行时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 动态表格内容 -->
+                </tbody>
+            </table>
+            <button class="btn btn-primary" id="addScraperBtn">添加爬虫</button>
+            <button class="btn btn-secondary" id="refreshScraperBtn">刷新</button>
+            <button class="btn btn-danger" id="clearScraperBtn">清除</button>
+        </div>
+        <div class="tab-pane fade" id="test" role="tabpanel">
+            <h2 class="mt-4">测试</h2>
+            <form id="testForm">
+                <div class="form-group">
+                    <label for="task">爬虫任务</label>
+                    <input type="text" class="form-control" id="task" placeholder="输入爬虫任务" required>
                 </div>
+                <div class="form-group">
+                    <label for="queue">选择队列</label>
+                    <select class="form-control" id="queue">
+                        {% for queue in redis_queues %}
+                            <option value="{{ queue }}">{{ queue }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">发送任务</button>
+                <button type="button" class="btn btn-danger" id="deleteTestResultBtn">删除测试结果</button>
+            </form>
+            <div id="testResult" class="mt-4">
+                <!-- 测试结果 -->
             </div>
         </div>
     </div>
+</div>
 
-    <script>
-        $(document).ready(function() {
-            const socket = io();
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.3/socket.io.js"></script>
+<script>
+    $(document).ready(function() {
+        const socket = io();
 
-            // 动态更新爬虫进程状态
-            socket.on('update_scraper_status', function(data) {
-                // 更新爬虫进程列表
-                const tableBody = $('#scraperTable tbody');
-                tableBody.empty();
-                data.forEach(function(scraper) {
-                    const row = `<tr>
-                        <td>${scraper.name}</td>
-                        <td>${scraper.status}</td>
-                        <td>${scraper.runtime}</td>
-                        <td>
-                            <button class="btn btn-success start-btn" data-name="${scraper.name}">启动</button>
-                            <button class="btn btn-warning stop-btn" data-name="${scraper.name}">停止</button>
-                            <button class="btn btn-info restart-btn" data-name="${scraper.name}">重启</button>
-                            <button class="btn btn-secondary logs-btn" data-name="${scraper.name}">查看日志</button>
-                        </td>
-                    </tr>`;
-                    tableBody.append(row);
-                });
-            });
-
-            $('#addScraperBtn').on('click', function() {
-                // 添加爬虫
-                const scraperNames = {{ scraper_names | tojson }};
-                const scraperName = prompt("请选择爬虫名称:", scraperNames.join(", "));
-                const scraperParams = prompt("请输入爬虫参数:");
-                $.post('/admin/scraper_manage/add', {
-                    scraper_name: scraperName,
-                    scraper_params: scraperParams
-                }, function(response) {
-                    alert(response.message);
-                });
-            });
-
-            $('#refreshScraperBtn').on('click', function() {
-                // 刷新爬虫进程列表
-                $.post('/admin/scraper_manage/refresh', function(response) {
-                    alert(response.message);
-                });
-            });
-
-            $('#clearScraperBtn').on('click', function() {
-                // 清除爬虫进程
-                const scraperNames = [];
-                $('input[name="scraperCheckbox"]:checked').each(function() {
-                    scraperNames.push($(this).val());
-                });
-                $.post('/admin/scraper_manage/clear', {
-                    scraper_names: scraperNames
-                }, function(response) {
-                    alert(response.message);
-                });
-            });
-
-            $('#testForm').on('submit', function(e) {
-                e.preventDefault();
-                const task = $('#task').val();
-                const queue = $('#queue').val();
-                // 发送测试任务
-                $.post('/admin/scraper_manage/test', {
-                    task: task,
-                    queue: queue
-                }, function(response) {
-                    alert(response.message);
-                    // 请求更新测试结果
-                    updateTestResult(task, queue);
-                });
-            });
-
-            $('#deleteTestResultBtn').on('click', function() {
-                const task = $('#task').val();
-                const queue = $('#queue').val();
-                // 删除测试结果
-                $.post('/admin/scraper_manage/delete_test_result', {
-                    task: task,
-                    queue: queue
-                }, function(response) {
-                    alert(response.message);
-                });
-            });
-
-            function updateTestResult(task, queue) {
-                $.post('/admin/scraper_manage/update_test_result', {
-                    task: task,
-                    queue: queue
-                }, function(response) {
-                    if (response.result) {
-                        const testResultDiv = $('#testResult');
-                        testResultDiv.empty();
-                        const result = `<div class="alert alert-info">任务: ${response.task}<br>结果: ${response.result}</div>`;
-                        testResultDiv.append(result);
-                    } else {
-                        setTimeout(function() {
-                            updateTestResult(task, queue);
-                        }, 1000);
-                    }
-                });
-            }
-
-            // 绑定启动、停止、重启、查看日志按钮事件
-            $(document).on('click', '.start-btn', function() {
-                const scraperName = $(this).data('name');
-                $.post('/admin/scraper_manage/start', { scraper_name: scraperName }, function(response) {
-                    alert(response.message);
-                });
-            });
-
-            $(document).on('click', '.stop-btn', function() {
-                const scraperName = $(this).data('name');
-                $.post('/admin/scraper_manage/stop', { scraper_name: scraperName }, function(response) {
-                    alert(response.message);
-                });
-            });
-
-            $(document).on('click', '.restart-btn', function() {
-                const scraperName = $(this).data('name');
-                $.post('/admin/scraper_manage/restart', { scraper_name: scraperName }, function(response) {
-                    alert(response.message);
-                });
-            });
-
-            $(document).on('click', '.logs-btn', function() {
-                const scraperName = $(this).data('name');
-                $.get('/admin/scraper_manage/logs', { scraper_name: scraperName }, function(response) {
-                    alert(response.logs);
-                });
+        // 动态更新爬虫进程状态
+        socket.on('update_scraper_status', function(data) {
+            // 更新爬虫进程列表
+            const tableBody = $('#scraperTable tbody');
+            tableBody.empty();
+            data.forEach(function(scraper) {
+                const row = `<tr>
+                    <td>${scraper.name}</td>
+                    <td>${scraper.status}</td>
+                    <td>${scraper.runtime}</td>
+                    <td>
+                        <button class="btn btn-success start-btn" data-name="${scraper.name}">启动</button>
+                        <button class="btn btn-warning stop-btn" data-name="${scraper.name}">停止</button>
+                        <button class="btn btn-info restart-btn" data-name="${scraper.name}">重启</button>
+                        <button class="btn btn-secondary logs-btn" data-name="${scraper.name}">查看日志</button>
+                    </td>
+                </tr>`;
+                tableBody.append(row);
             });
         });
-    </script>
-</body>
-</html>
+
+        $('#addScraperBtn').on('click', function() {
+            // 添加爬虫
+            const scraperNames = {{ scraper_names | tojson }};
+            const scraperName = prompt("请选择爬虫名称:", scraperNames.join(", "));
+            const scraperParams = prompt("请输入爬虫参数:");
+            $.post('/admin/scraper_manage/add', {
+                scraper_name: scraperName,
+                scraper_params: scraperParams
+            }, function(response) {
+                alert(response.message);
+            });
+        });
+
+        $('#refreshScraperBtn').on('click', function() {
+            // 刷新爬虫进程列表
+            $.post('/admin/scraper_manage/refresh', function(response) {
+                alert(response.message);
+            });
+        });
+
+        $('#clearScraperBtn').on('click', function() {
+            // 清除爬虫进程
+            const scraperNames = [];
+            $('input[name="scraperCheckbox"]:checked').each(function() {
+                scraperNames.push($(this).val());
+            });
+            $.post('/admin/scraper_manage/clear', {
+                scraper_names: scraperNames
+            }, function(response) {
+                alert(response.message);
+            });
+        });
+
+        $('#testForm').on('submit', function(e) {
+            e.preventDefault();
+            const task = $('#task').val();
+            const queue = $('#queue').val();
+            // 发送测试任务
+            $.post('/admin/scraper_manage/test', {
+                task: task,
+                queue: queue
+            }, function(response) {
+                alert(response.message);
+                // 请求更新测试结果
+                updateTestResult(task, queue);
+            });
+        });
+
+        $('#deleteTestResultBtn').on('click', function() {
+            const task = $('#task').val();
+            const queue = $('#queue').val();
+            // 删除测试结果
+            $.post('/admin/scraper_manage/delete_test_result', {
+                task: task,
+                queue: queue
+            }, function(response) {
+                alert(response.message);
+            });
+        });
+
+        function updateTestResult(task, queue) {
+            $.post('/admin/scraper_manage/update_test_result', {
+                task: task,
+                queue: queue
+            }, function(response) {
+                if (response.result) {
+                    const testResultDiv = $('#testResult');
+                    testResultDiv.empty();
+                    const result = `<div class="alert alert-info">任务: ${response.task}<br>结果: ${response.result}</div>`;
+                    testResultDiv.append(result);
+                } else {
+                    setTimeout(function() {
+                        updateTestResult(task, queue);
+                    }, 1000);
+                }
+            });
+        }
+
+        // 绑定启动、停止、重启、查看日志按钮事件
+        $(document).on('click', '.start-btn', function() {
+            const scraperName = $(this).data('name');
+            $.post('/admin/scraper_manage/start', { scraper_name: scraperName }, function(response) {
+                alert(response.message);
+            });
+        });
+
+        $(document).on('click', '.stop-btn', function() {
+            const scraperName = $(this).data('name');
+            $.post('/admin/scraper_manage/stop', { scraper_name: scraperName }, function(response) {
+                alert(response.message);
+            });
+        });
+
+        $(document).on('click', '.restart-btn', function() {
+            const scraperName = $(this).data('name');
+            $.post('/admin/scraper_manage/restart', { scraper_name: scraperName }, function(response) {
+                alert(response.message);
+            });
+        });
+
+        $(document).on('click', '.logs-btn', function() {
+            const scraperName = $(this).data('name');
+            $.get('/admin/scraper_manage/logs', { scraper_name: scraperName }, function(response) {
+                alert(response.logs);
+            });
+        });
+    });
+</script>
+{% endblock %}

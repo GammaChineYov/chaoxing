@@ -1,39 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>用户登录</title>
-</head>
-<body>
-    {% extends "base.html" %}
+{% extends "base.html" %}
 
-    {% block content %}
-    <h1>首页</h1>
-    <p>欢迎使用 Flask Redis 应用</p>
-    {% endblock %}
-    <h1>用户登录</h1>
-    <form id="loginForm">
-        <label for="username">用户名:</label>
-        <input type="text" id="username" name="username"><br><br>
-        <label for="password">密码:</label>
-        <input type="password" id="password" name="password"><br><br>
-        <button type="button" onclick="login()">登录</button>
-    </form>
-    <script>
-        function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            fetch('/user/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ username, password })
-            })
-            .then(response => response.json())
-            .then(data => alert(data.message))
-            .catch(error => console.error('Error:', error));
-        }
-    </script>
-</body>
-</html>
+{% block title %}首页{% endblock %}
+
+{% block content %}
+<h1>首页</h1>
+<p>欢迎使用 Flask Redis 应用</p>
+{% endblock %}

@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block title %}用户登录{% endblock %}
+
 {% block content %}
 <h1>用户登录</h1>
 <form id="loginForm">
@@ -24,7 +26,7 @@
         .then(data => {
             alert(data.message);
             if (data.message === "登录成功") {
-                window.location.href = "/";
+                window.history.back();
             }
         })
         .catch(error => console.error('Error:', error));

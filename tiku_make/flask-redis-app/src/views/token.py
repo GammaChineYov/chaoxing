@@ -1,5 +1,5 @@
 import uuid
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, render_template
 from flask_httpauth import HTTPTokenAuth, HTTPBasicAuth
 from werkzeug.security import check_password_hash
 from src.extensions import redis_client
@@ -34,3 +34,7 @@ def validate_token():
 @auth.verify_token
 def verify_token(token):
     return redis_client.sismember('tokens', token)
+
+@token_bp.route('/', methods=['GET'])
+def token_page():
+    return render_template('token.html')

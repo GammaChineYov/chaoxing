@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request, jsonify, session, render_template
 from flask_socketio import SocketIO, emit
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from src.models.user import User
@@ -87,3 +87,7 @@ def handle_log(data):
     study_session = StudySession.query.filter_by(user_id=user_id, end_time=None).first()
     if study_session:
         emit('log', {'data': data}, room=study_session.id)
+
+@study_bp.route('/', methods=['GET'])
+def study_page():
+    return render_template('study.html')
