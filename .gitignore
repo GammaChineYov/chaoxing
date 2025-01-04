@@ -147,3 +147,6 @@ config*.ini
 .idea/
 .vscode/
 cache.json
+qrcode.png
+tiku_make/flask-redis-app/src/app.db
+sec.txt

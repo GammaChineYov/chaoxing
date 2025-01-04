@@ -107,9 +107,9 @@ if __name__ == "__main__":
     # 推理模型本地识别名
     name= "豆包-pro-32k"
     # 推理接入点，推理模型名称
-    endpoint="ep-20241129235300-j4jd7"
+    endpoint=""
     # api_key from: https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey?apikey=%7B%7D
-    api_key= "6b8b6ae1-4882-4a3e-839e-ad264a46dd77"
+    api_key= ""
     # api from: https://www.volcengine.com/docs/82379/1298454
     api_url= "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
     ai_conf = {"api_url": api_url, "model_endpoint": endpoint, "api_key": api_key}
@@ -148,8 +148,8 @@ json_data: {
         }
     ],
     "created": 1735235143,
-    "id": "02173523513584832b8fb9c2ace19b7fe814bde39c812aa454152",
-    "model": "doubao-pro-32k-240828",
+    "id": "0217352351",
+    "model": "doubao-pro-32k",
     "object": "chat.completion",
     "usage": {
         "completion_tokens": 187,
