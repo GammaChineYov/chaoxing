@@ -3,6 +3,7 @@ import re
 import time
 import random
 import requests
+from difflib import SequenceMatcher  # 导入用于计算相似度的库
 from hashlib import md5
 from requests.adapters import HTTPAdapter
 
@@ -466,6 +467,18 @@ class Chaoxing:
                         if res in o:
                             answer = o[:1]
                             break
+                        
+                    if not answer:
+                        # 计算所有选项的相似度
+                        options_sim_list = [(o, SequenceMatcher(None, res, o).ratio()) for o in options_list]
+
+                        # 按相似度从高到低排序
+                        options_sim_list.sort(key=lambda x: x[1], reverse=True)
+
+                        # 如果最高相似度的选项超过50%，选择它作为答案
+                        if options_sim_list[0][1] > 0.5:
+                            answer = options_sim_list[0][0][:1]  # 取选项的第一个字符作为答案
+                    
                     # 如果未能匹配, 依然随机答题
                     if answer:
                         answer = answer

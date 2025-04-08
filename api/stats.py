@@ -11,7 +11,7 @@ documents = []
 lock = threading.Lock()
 
 # Guard to ensure the thread is only started once
-if not hasattr(threading, 'save_documents_thread'):
+if hasattr(threading, 'save_documents_thread'):
     def save_documents():
         while True:
             with lock:
@@ -19,7 +19,8 @@ if not hasattr(threading, 'save_documents_thread'):
             for item in temp_documents:
                 resp = item['resp']
                 del item['resp']
-                del item['stats']['q_info']
+                if 'q_info' in item['stats']:
+                    del item['stats']['q_info']
                 stats_hash = md5(json.dumps(item, sort_keys=True).encode()).hexdigest()
                 course_title = item["stats"]["course"]["title"]
                 chapter_title = item["stats"]["chapter_point"]["title"]
