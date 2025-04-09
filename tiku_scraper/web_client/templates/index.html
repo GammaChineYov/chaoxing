@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Scraper</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Question Scraper</h1>
+        
+        <div class="input-section">
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="switchTab('single')">Single Question</button>
+                <button class="tab-btn" onclick="switchTab('batch')">Batch Questions</button>
+            </div>
+            
+            <div id="single-tab" class="tab-content">
+                <textarea id="question-input" placeholder="Enter your question..."></textarea>
+                <button onclick="scrapeQuestion()">Search</button>
+            </div>
+            
+            <div id="batch-tab" class="tab-content" style="display:none">
+                <textarea id="batch-input" placeholder="Enter questions, one per line..."></textarea>
+                <button onclick="scrapeBatch()">Search All</button>
+            </div>
+        </div>
+        
+        <div class="results-section">
+            <h2>Results</h2>
+            <div id="results-container"></div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').style.display = 'block';
+            
+            // Update active button
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+        
+        function scrapeQuestion() {
+            const question = document.getElementById('question-input').value.trim();
+            if (!question) {
+                showError('Please enter a question');
+                return;
+            }
+            
+            showLoading();
+            
+            fetch(`/api/scrape?q=${encodeURIComponent(question)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'error') {
+                        showError(data.message);
+                    } else {
+                        displayResults(data);
+                    }
+                })
+                .catch(error => {
+                    showError('Network error: ' + error.message);
+                })
+                .finally(() => hideLoading());
+        }
+        
+        function scrapeBatch() {
+            const questions = document.getElementById('batch-input').value
+                .split('\n')
+                .filter(q => q.trim());
+                
+            if (!questions.length) {
+                showError('Please enter at least one question');
+                return;
+            }
+            
+            showLoading();
+            
+            fetch('/api/batch_scrape', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({questions})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'error') {
+                    showError(data.message);
+                } else {
+                    displayResults(data);
+                }
+            })
+            .catch(error => {
+                showError('Network error: ' + error.message);
+            })
+            .finally(() => hideLoading());
+        }
+        
+        function displayResults(data) {
+            const container = document.getElementById('results-container');
+            container.innerHTML = '';
+            
+            if (!data.results || !data.results.length) {
+                container.innerHTML = '<div class="no-results">No results found</div>';
+                return;
+            }
+            
+            // Add summary for batch queries
+            if (data.questions && data.questions.length > 1) {
+                const summary = document.createElement('div');
+                summary.className = 'summary';
+                summary.innerHTML = `Found ${data.count} results for ${data.questions.length} questions`;
+                container.appendChild(summary);
+            }
+            
+            data.results.forEach((result, index) => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'result-item';
+                resultDiv.innerHTML = `
+                    <h3>${index + 1}. ${result.question}</h3>
+                    <div class="answer">${result.answer || 'No answer found'}</div>
+                `;
+                container.appendChild(resultDiv);
+            });
+        }
+        
+        function showError(message) {
+            const container = document.getElementById('results-container');
+            container.innerHTML = `<div class="error">${message}</div>`;
+        }
+        
+        function showLoading() {
+            const container = document.getElementById('results-container');
+            container.innerHTML = '<div class="loading">Searching...</div>';
+        }
+        
+        function hideLoading() {
+            // Loading state is automatically replaced by results/error
+        }
+    </script>
+</body>
+</html>
